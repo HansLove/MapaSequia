@@ -11,6 +11,7 @@ export class DroughtMapApp {
     this.currentTimeIndex = 0;
     this.isAnimating = false;
     this.animationSpeed = 100; // milliseconds between frames
+    this.heatmapIntensity = 0.5; // 0 to 1, default to moderate
     
     this.initializeApp();
   }
@@ -38,6 +39,14 @@ export class DroughtMapApp {
     if (!mapContainer) {
       console.error('Map container not found!');
       return;
+    }
+    
+    // Check if map is already initialized
+    if (mapContainer._leaflet_id) {
+      console.log('Map already initialized, removing existing map...');
+      mapContainer._leaflet_id = null;
+      // Clear any existing map content
+      mapContainer.innerHTML = '';
     }
     
     console.log('Map container found:', mapContainer);
@@ -82,8 +91,18 @@ export class DroughtMapApp {
     this.timeSlider.max = this.timeArray.length - 1;
     this.timeSlider.value = Math.floor(this.timeArray.length / 2); // Start in middle (around 2035)
     
-    // Update display
+    // Initialize heat-map controls
+    this.heatmapSlider = document.getElementById('heatmapSlider');
+    this.currentHeatmapDisplay = document.getElementById('currentHeatmap');
+    
+    // Set heat-map slider properties
+    this.heatmapSlider.min = 0;
+    this.heatmapSlider.max = 100;
+    this.heatmapSlider.value = 50; // Start at moderate intensity
+    
+    // Update displays
     this.updateTimeDisplay();
+    this.updateHeatmapDisplay();
   }
 
   // Initialize event listeners
@@ -91,6 +110,12 @@ export class DroughtMapApp {
     // Time slider
     this.timeSlider.addEventListener('input', (e) => {
       this.currentTimeIndex = parseInt(e.target.value);
+      this.updateDroughtMap();
+    });
+
+    // Heat-map slider
+    this.heatmapSlider.addEventListener('input', (e) => {
+      this.heatmapIntensity = parseInt(e.target.value) / 100; // Convert to 0-1 range
       this.updateDroughtMap();
     });
 
@@ -142,6 +167,14 @@ export class DroughtMapApp {
         e.preventDefault();
         this.nextTime();
         break;
+      case 'ArrowUp':
+        e.preventDefault();
+        this.increaseHeatmapIntensity();
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        this.decreaseHeatmapIntensity();
+        break;
       case ' ':
         e.preventDefault();
         this.toggleAnimation();
@@ -157,11 +190,24 @@ export class DroughtMapApp {
     }
   }
 
+  // Increase heat-map intensity
+  increaseHeatmapIntensity() {
+    this.heatmapIntensity = Math.min(1.0, this.heatmapIntensity + 0.1);
+    this.updateDroughtMap();
+  }
+
+  // Decrease heat-map intensity
+  decreaseHeatmapIntensity() {
+    this.heatmapIntensity = Math.max(0.0, this.heatmapIntensity - 0.1);
+    this.updateDroughtMap();
+  }
+
   // Update drought map
   updateDroughtMap() {
     const currentDate = this.timeArray[this.currentTimeIndex];
-    this.mapVisualizer.updateDroughtMap(currentDate);
+    this.mapVisualizer.updateDroughtMap(currentDate, this.heatmapIntensity);
     this.updateTimeDisplay();
+    this.updateHeatmapDisplay();
   }
 
   // Update time display
@@ -171,6 +217,15 @@ export class DroughtMapApp {
     
     // Update slider position
     this.timeSlider.value = this.currentTimeIndex;
+  }
+
+  // Update heat-map display
+  updateHeatmapDisplay() {
+    const heatmapName = this.droughtCalculator.getHeatMapIntensityName(this.heatmapIntensity);
+    this.currentHeatmapDisplay.textContent = heatmapName;
+    
+    // Update slider position
+    this.heatmapSlider.value = Math.round(this.heatmapIntensity * 100);
   }
 
   // Navigate to previous time

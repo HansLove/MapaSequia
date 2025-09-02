@@ -44,15 +44,15 @@ export class MapVisualizer {
     const polygons = [];
     
     droughtData.forEach(stateData => {
-      if (stateData.intensity > 0.05) { // Only show if there's some drought
-        const polygon = L.polygon(stateData.coordinates, {
-          color: this.getBorderColor(stateData.level),
-          weight: this.getBorderWeight(stateData.intensity),
-          fillColor: stateData.color,
-          fillOpacity: this.getFillOpacity(stateData.intensity),
-          opacity: 0.8,
-          className: 'drought-polygon'
-        });
+      // Show all states, but with different opacity based on intensity
+      const polygon = L.polygon(stateData.coordinates, {
+        color: this.getBorderColor(stateData.level),
+        weight: this.getBorderWeight(stateData.intensity),
+        fillColor: stateData.color,
+        fillOpacity: this.getFillOpacity(stateData.intensity, stateData.heatmapIntensity),
+        opacity: 0.8,
+        className: 'drought-polygon'
+      });
 
         // Add smooth hover effects
         polygon.on('mouseover', function(e) {
@@ -87,7 +87,6 @@ export class MapVisualizer {
         });
 
         polygons.push(polygon);
-      }
     });
 
     return polygons;
@@ -104,19 +103,28 @@ export class MapVisualizer {
     return Math.max(1, Math.min(3, intensity * 3));
   }
 
-  // Get fill opacity based on intensity
-  getFillOpacity(intensity) {
-    return Math.max(0.3, Math.min(0.8, intensity * 0.8));
+  // Get fill opacity based on intensity and heat-map intensity
+  getFillOpacity(intensity, heatmapIntensity = 0.5) {
+    // Base opacity from drought intensity
+    let baseOpacity = Math.max(0.2, Math.min(0.9, intensity * 0.8));
+    
+    // Adjust opacity based on heat-map intensity
+    // Higher heat-map intensity = more visible
+    const heatmapFactor = 0.3 + (heatmapIntensity * 0.7); // 0.3 to 1.0
+    
+    return Math.min(0.9, baseOpacity * heatmapFactor);
   }
 
   // Create enhanced tooltip content
   createTooltipContent(stateData) {
     const intensityPercent = Math.round(stateData.intensity * 100);
+    const heatmapPercent = Math.round((stateData.heatmapIntensity || 0.5) * 100);
     return `
       <div class="tooltip-content">
         <strong>${stateData.name}</strong><br>
         <span class="drought-level">${stateData.levelName}</span><br>
         <span class="intensity">Intensidad: ${intensityPercent}%</span><br>
+        <span class="heatmap-intensity">Mapa de Calor: ${heatmapPercent}%</span><br>
         <span class="date">${stateData.date}</span>
       </div>
     `;
@@ -125,6 +133,7 @@ export class MapVisualizer {
   // Create detailed popup content
   createPopupContent(stateData) {
     const intensityPercent = Math.round(stateData.intensity * 100);
+    const heatmapPercent = Math.round((stateData.heatmapIntensity || 0.5) * 100);
     const climateZone = this.getClimateZoneName(stateData.climateZone);
     
     return `
@@ -140,6 +149,10 @@ export class MapVisualizer {
             <span class="value">${intensityPercent}%</span>
           </div>
           <div class="info-row">
+            <span class="label">Mapa de Calor:</span>
+            <span class="value">${heatmapPercent}%</span>
+          </div>
+          <div class="info-row">
             <span class="label">Zona Climática:</span>
             <span class="value">${climateZone}</span>
           </div>
@@ -150,6 +163,9 @@ export class MapVisualizer {
         </div>
         <div class="drought-bar">
           <div class="drought-fill" style="width: ${intensityPercent}%; background-color: ${stateData.color};"></div>
+        </div>
+        <div class="heatmap-bar">
+          <div class="heatmap-fill" style="width: ${heatmapPercent}%; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #f97316, #ef4444);"></div>
         </div>
       </div>
     `;
@@ -167,8 +183,8 @@ export class MapVisualizer {
   }
 
   // Update map with new drought data
-  updateDroughtMap(date) {
-    console.log('MapVisualizer: updateDroughtMap called with date:', date);
+  updateDroughtMap(date, heatmapIntensity = 0.5) {
+    console.log('MapVisualizer: updateDroughtMap called with date:', date, 'heatmapIntensity:', heatmapIntensity);
     
     // Cancel any ongoing animation
     if (this.animationFrame) {
@@ -187,9 +203,9 @@ export class MapVisualizer {
           console.log('MapVisualizer: Removed existing drought layer');
         }
 
-        // Calculate new drought data
+        // Calculate new drought data with heat-map intensity
         console.log('MapVisualizer: Getting drought data...');
-        const droughtData = this.droughtCalculator.getStatesDroughtData(date);
+        const droughtData = this.droughtCalculator.getStatesDroughtData(date, heatmapIntensity);
         console.log('MapVisualizer: Got drought data:', droughtData.length, 'states');
         
         // Create new polygons
@@ -208,7 +224,8 @@ export class MapVisualizer {
         // Trigger custom event for UI updates
         this.map.fire('droughtmap:updated', {
           date: date,
-          data: droughtData
+          data: droughtData,
+          heatmapIntensity: heatmapIntensity
         });
         
         console.log('MapVisualizer: updateDroughtMap completed successfully');

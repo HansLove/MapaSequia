@@ -14,7 +14,7 @@ export const mexicanStates = [
     coordinates: [
       [[32.7186, -117.1611], [32.7186, -114.6331], [31.8667, -114.6331], [31.8667, -116.6000], [30.5333, -116.6000], [30.5333, -115.9500], [28.0000, -115.9500], [28.0000, -117.1611], [32.7186, -117.1611]]
     ],
-    baseIntensity: 0.8,
+    baseIntensity: 0.9,
     seasonal: 0.4,
     climateZone: "desert"
   },
@@ -23,7 +23,7 @@ export const mexicanStates = [
     coordinates: [
       [[28.0000, -115.0000], [28.0000, -109.0000], [22.0000, -109.0000], [22.0000, -115.0000], [28.0000, -115.0000]]
     ],
-    baseIntensity: 0.8,
+    baseIntensity: 0.9,
     seasonal: 0.4,
     climateZone: "desert"
   },
@@ -50,7 +50,7 @@ export const mexicanStates = [
     coordinates: [
       [[31.8667, -108.0000], [31.8667, -103.0000], [28.0000, -103.0000], [28.0000, -108.0000], [31.8667, -108.0000]]
     ],
-    baseIntensity: 0.6,
+    baseIntensity: 0.8,
     seasonal: 0.6,
     climateZone: "arid"
   },
@@ -59,7 +59,7 @@ export const mexicanStates = [
     coordinates: [
       [[29.0000, -103.0000], [29.0000, -100.0000], [25.0000, -100.0000], [25.0000, -103.0000], [29.0000, -103.0000]]
     ],
-    baseIntensity: 0.7,
+    baseIntensity: 0.8,
     seasonal: 0.5,
     climateZone: "arid"
   },
@@ -221,7 +221,7 @@ export const mexicanStates = [
     coordinates: [
       [[32.7186, -117.1611], [32.7186, -108.0000], [31.8667, -108.0000], [31.8667, -110.0000], [30.5333, -110.0000], [30.5333, -111.0000], [28.0000, -111.0000], [28.0000, -114.6331], [31.8667, -114.6331], [32.7186, -117.1611]]
     ],
-    baseIntensity: 0.7,
+    baseIntensity: 0.9,
     seasonal: 0.5,
     climateZone: "desert"
   },

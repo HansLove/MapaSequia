@@ -88,23 +88,121 @@ export class DroughtCalculator {
     return levelNames[level] || levelNames[0];
   }
 
-  // Get heat map color for drought level
-  getHeatMapColor(level, intensity) {
-    // More sophisticated color scheme with gradients
+  // Get heat map color for drought level with heat-map intensity modifier
+  getHeatMapColor(level, intensity, heatmapIntensity = 0.5) {
+    // Dramatic color schemes that change significantly with heat-map intensity
     const colorSchemes = {
-      0: { base: '#e6f3ff', gradient: '#cce7ff' }, // Normal - Light blue
-      1: { base: '#ffffcc', gradient: '#fff2a3' }, // D0 - Light yellow
-      2: { base: '#ffd966', gradient: '#ffcc33' }, // D1 - Yellow
-      3: { base: '#ffb366', gradient: '#ff9933' }, // D2 - Orange
-      4: { base: '#ff8c66', gradient: '#ff6b33' }, // D3 - Red-orange
-      5: { base: '#ff6666', gradient: '#ff3333' }  // D4 - Red
+      0: { 
+        normal: '#e6f3ff',    // Light blue
+        moderate: '#3b82f6',  // Blue
+        extreme: '#1e40af'    // Dark blue
+      },
+      1: { 
+        normal: '#ffffcc',    // Light yellow
+        moderate: '#f59e0b',  // Orange
+        extreme: '#dc2626'    // Red
+      },
+      2: { 
+        normal: '#ffd966',    // Yellow
+        moderate: '#f97316',  // Orange-red
+        extreme: '#dc2626'    // Red
+      },
+      3: { 
+        normal: '#ffb366',    // Light orange
+        moderate: '#ef4444',  // Red
+        extreme: '#991b1b'    // Dark red
+      },
+      4: { 
+        normal: '#ff8c66',    // Orange
+        moderate: '#dc2626',  // Red
+        extreme: '#7f1d1d'    // Very dark red
+      },
+      5: { 
+        normal: '#ff6666',    // Light red
+        moderate: '#991b1b',  // Dark red
+        extreme: '#450a0a'    // Almost black
+      }
     };
     
     const scheme = colorSchemes[level] || colorSchemes[0];
     
-    // Create gradient based on intensity within the level
+    // Create dramatic color changes based on heat-map intensity
+    let finalColor;
+    
+    if (heatmapIntensity <= 0.33) {
+      // Low intensity - use normal colors
+      finalColor = scheme.normal;
+    } else if (heatmapIntensity <= 0.66) {
+      // Medium intensity - interpolate between normal and moderate
+      const factor = (heatmapIntensity - 0.33) / 0.33;
+      finalColor = this.interpolateColor(scheme.normal, scheme.moderate, factor);
+    } else {
+      // High intensity - interpolate between moderate and extreme
+      const factor = (heatmapIntensity - 0.66) / 0.34;
+      finalColor = this.interpolateColor(scheme.moderate, scheme.extreme, factor);
+    }
+    
+    // Add some variation based on drought intensity within the level
     const intensityInLevel = (intensity * 4) % 1;
-    return this.interpolateColor(scheme.base, scheme.gradient, intensityInLevel);
+    if (intensityInLevel > 0.5) {
+      // Make it slightly brighter for higher intensity
+      finalColor = this.lightenColor(finalColor, 0.1);
+    }
+    
+    return finalColor;
+  }
+
+  // Apply heat effect to color (increase saturation and brightness)
+  applyHeatEffect(baseColor, heatColor, factor) {
+    const base = this.hexToRgb(baseColor);
+    const heat = this.hexToRgb(heatColor);
+    
+    const r = Math.round(base.r + (heat.r - base.r) * factor);
+    const g = Math.round(base.g + (heat.g - base.g) * factor);
+    const b = Math.round(base.b + (heat.b - base.b) * factor);
+    
+    return this.rgbToHex(r, g, b);
+  }
+
+  // Apply cool effect to color (decrease saturation)
+  applyCoolEffect(baseColor, factor) {
+    const rgb = this.hexToRgb(baseColor);
+    
+    // Convert to grayscale and blend
+    const gray = Math.round(rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114);
+    
+    const r = Math.round(rgb.r + (gray - rgb.r) * factor);
+    const g = Math.round(rgb.g + (gray - rgb.g) * factor);
+    const b = Math.round(rgb.b + (gray - rgb.b) * factor);
+    
+    return this.rgbToHex(r, g, b);
+  }
+
+  // Convert hex to RGB
+  hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  }
+
+  // Convert RGB to hex
+  rgbToHex(r, g, b) {
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+
+  // Lighten a color by a factor (0-1)
+  lightenColor(hexColor, factor) {
+    const rgb = this.hexToRgb(hexColor);
+    if (!rgb) return hexColor;
+    
+    const r = Math.min(255, Math.round(rgb.r + (255 - rgb.r) * factor));
+    const g = Math.min(255, Math.round(rgb.g + (255 - rgb.g) * factor));
+    const b = Math.min(255, Math.round(rgb.b + (255 - rgb.b) * factor));
+    
+    return this.rgbToHex(r, g, b);
   }
 
   // Interpolate between two colors
@@ -133,15 +231,15 @@ export class DroughtCalculator {
   }
 
   // Get all states with their drought data for a specific date
-  getStatesDroughtData(date) {
-    console.log('DroughtCalculator: getStatesDroughtData called with date:', date);
+  getStatesDroughtData(date, heatmapIntensity = 0.5) {
+    console.log('DroughtCalculator: getStatesDroughtData called with date:', date, 'heatmapIntensity:', heatmapIntensity);
     console.log('DroughtCalculator: Processing', this.states.length, 'states');
     
     const result = this.states.map(state => {
       const intensity = this.calculateDroughtIntensity(state, date);
       const level = this.getDroughtLevel(intensity);
       const levelName = this.getDroughtLevelName(level);
-      const color = this.getHeatMapColor(level, intensity);
+      const color = this.getHeatMapColor(level, intensity, heatmapIntensity);
       
       return {
         ...state,
@@ -149,7 +247,8 @@ export class DroughtCalculator {
         level,
         levelName,
         color,
-        date: this.formatDate(date)
+        date: this.formatDate(date),
+        heatmapIntensity
       };
     });
     
@@ -157,5 +256,14 @@ export class DroughtCalculator {
     console.log('DroughtCalculator: Sample state data:', result[0]);
     
     return result;
+  }
+
+  // Get heat-map intensity level name
+  getHeatMapIntensityName(intensity) {
+    if (intensity <= 0.2) return 'Normal';
+    if (intensity <= 0.4) return 'Suave';
+    if (intensity <= 0.6) return 'Moderado';
+    if (intensity <= 0.8) return 'Intenso';
+    return 'Extremo';
   }
 }

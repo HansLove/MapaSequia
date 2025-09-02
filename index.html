@@ -30,6 +30,16 @@
       <button id="resetButton" class="control-btn">🔄 Reiniciar</button>
     </div>
 
+    <div class="heatmap-control">
+      <label for="heatmapSlider">Intensidad del Mapa de Calor:</label>
+      <input type="range" id="heatmapSlider" class="heatmap-slider" min="0" max="100" value="50" />
+      <div class="heatmap-display">
+        <span>Normal</span>
+        <span class="current-heatmap" id="currentHeatmap">Moderado</span>
+        <span>Extremo</span>
+      </div>
+    </div>
+
     <div class="speed-control">
       <label for="speedControl">Velocidad de Animación:</label>
       <select id="speedControl" class="speed-select">
@@ -95,20 +105,6 @@
       // Check if Leaflet is loaded
       if (typeof L !== 'undefined') {
         console.log('Debug: Leaflet is available');
-        
-        // Try to create a simple map
-        try {
-          const testMap = L.map('map').setView([23.6345, -102.5528], 5);
-          console.log('Debug: Test map created successfully');
-          
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap, © CARTO'
-          }).addTo(testMap);
-          console.log('Debug: Test tile layer added');
-          
-        } catch (error) {
-          console.error('Debug: Error creating test map:', error);
-        }
       } else {
         console.error('Debug: Leaflet not available');
       }
