@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Simulador de Sequía en México</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
+    
+    .control-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.95);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      padding: 20px;
+      width: 300px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    
+    .control-panel h2 {
+      margin: 0 0 20px;
+      font-size: 18px;
+      color: #1e293b;
+    }
+    
+    .time-control {
+      margin-bottom: 15px;
+    }
+    
+    .time-control label {
+      display: block;
+      font-size: 14px;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+    
+    .time-slider {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(to right, #10b981, #f59e0b, #ef4444);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+    }
+    
+    .time-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #1e293b;
+      cursor: pointer;
+      border: 3px solid #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    
+    .time-slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #1e293b;
+      cursor: pointer;
+      border: 3px solid #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    
+    .time-display {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+    
+    .current-time {
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 14px;
+    }
+    
+    .legend {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.95);
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      max-width: 250px;
+    }
+    
+    .legend h3 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: #1e293b;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin: 5px 0;
+      font-size: 12px;
+    }
+    
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      margin-right: 8px;
+      border: 1px solid rgba(0,0,0,0.2);
+    }
+    
+    .normal { background-color: #e6f3ff; }
+    .d0 { background-color: #ffffcc; }
+    .d1 { background-color: #ffd966; }
+    .d2 { background-color: #ffb366; }
+    .d3 { background-color: #ff8c66; }
+    .d4 { background-color: #ff6666; }
+    
+    .credits {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 1000;
+      font-size: 11px;
+      background: rgba(255,255,255,0.9);
+      border-radius: 8px;
+      padding: 8px 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="control-panel">
+    <h2>🌵 Simulador de Sequía en México</h2>
+    
+    <div class="time-control">
+      <label for="timeSlider">Tiempo (2020 - 2024)</label>
+      <input type="range" id="timeSlider" class="time-slider" min="0" max="59" value="30" />
+      <div class="time-display">
+        <span>2020-01</span>
+        <span class="current-time" id="currentTime">2022-06</span>
+        <span>2024-12</span>
+      </div>
+    </div>
+      </div>
+
+  <div class="legend">
+    <h3>Niveles de Sequía</h3>
+    <div class="legend-item">
+      <div class="legend-color normal"></div>
+      <span>Normal</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color d0"></div>
+      <span>D0 - Anormalmente Seco</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color d1"></div>
+      <span>D1 - Sequía Moderada</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color d2"></div>
+      <span>D2 - Sequía Severa</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color d3"></div>
+      <span>D3 - Sequía Extrema</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color d4"></div>
+      <span>D4 - Sequía Excepcional</span>
+    </div>
+  </div>
+
+  <div class="credits">
+    Basado en el Monitor de Sequía en México (SMN-CONAGUA)
+  </div>
+
+  <script>
+    // Initialize map
+    const map = L.map('map', {
+      center: [23.6345, -102.5528], // Mexico center
+      zoom: 5,
+      minZoom: 3
+    });
+
+    // Add base map
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap, © CARTO'
+    }).addTo(map);
+
+    // Time slider elements
+    const timeSlider = document.getElementById('timeSlider');
+    const currentTimeDisplay = document.getElementById('currentTime');
+
+    // Generate time array (2020-01 to 2024-12, monthly)
+    function generateTimeArray() {
+      const times = [];
+      const start = new Date('2020-01-01');
+      const end = new Date('2024-12-01');
+      const current = new Date(start);
+      
+      while (current <= end) {
+        times.push(new Date(current));
+        current.setMonth(current.getMonth() + 1);
+      }
+      return times;
+    }
+
+    const timeArray = generateTimeArray();
+    let currentDroughtLayer = null;
+
+    // Mexican states/regions with proper geographic boundaries
+    const mexicanRegions = [
+      {
+        name: "Baja California",
+        coordinates: [
+          [[32.7186, -117.1611], [32.7186, -114.6331], [31.8667, -114.6331], [31.8667, -116.6000], [30.5333, -116.6000], [30.5333, -115.9500], [28.0000, -115.9500], [28.0000, -117.1611], [32.7186, -117.1611]]
+        ],
+        baseIntensity: 0.8,
+        seasonal: 0.4
+      },
+      {
+        name: "Sonora",
+        coordinates: [
+          [[32.7186, -117.1611], [32.7186, -108.0000], [31.8667, -108.0000], [31.8667, -110.0000], [30.5333, -110.0000], [30.5333, -111.0000], [28.0000, -111.0000], [28.0000, -114.6331], [31.8667, -114.6331], [32.7186, -117.1611]]
+        ],
+        baseIntensity: 0.7,
+        seasonal: 0.5
+      },
+      {
+        name: "Chihuahua",
+        coordinates: [
+          [[31.8667, -108.0000], [31.8667, -103.0000], [28.0000, -103.0000], [28.0000, -108.0000], [31.8667, -108.0000]]
+        ],
+        baseIntensity: 0.6,
+        seasonal: 0.6
+      },
+      {
+        name: "Coahuila",
+        coordinates: [
+          [[29.0000, -103.0000], [29.0000, -100.0000], [25.0000, -100.0000], [25.0000, -103.0000], [29.0000, -103.0000]]
+        ],
+        baseIntensity: 0.7,
+        seasonal: 0.5
+      },
+      {
+        name: "Nuevo León",
+        coordinates: [
+          [[26.0000, -100.0000], [26.0000, -98.0000], [24.0000, -98.0000], [24.0000, -100.0000], [26.0000, -100.0000]]
+        ],
+        baseIntensity: 0.5,
+        seasonal: 0.6
+      },
+      {
+        name: "Tamaulipas",
+        coordinates: [
+          [[26.0000, -98.0000], [26.0000, -97.0000], [22.0000, -97.0000], [22.0000, -98.0000], [26.0000, -98.0000]]
+        ],
+        baseIntensity: 0.4,
+        seasonal: 0.7
+      },
+      {
+        name: "Durango",
+        coordinates: [
+          [[26.0000, -105.0000], [26.0000, -103.0000], [22.0000, -103.0000], [22.0000, -105.0000], [26.0000, -105.0000]]
+        ],
+        baseIntensity: 0.6,
+        seasonal: 0.5
+      },
+      {
+        name: "Zacatecas",
+        coordinates: [
+          [[24.0000, -103.0000], [24.0000, -101.0000], [21.0000, -101.0000], [21.0000, -103.0000], [24.0000, -103.0000]]
+        ],
+        baseIntensity: 0.5,
+        seasonal: 0.6
+      },
+      {
+        name: "San Luis Potosí",
+        coordinates: [
+          [[24.0000, -101.0000], [24.0000, -98.0000], [21.0000, -98.0000], [21.0000, -101.0000], [24.0000, -101.0000]]
+        ],
+        baseIntensity: 0.4,
+        seasonal: 0.7
+      },
+      {
+        name: "Aguascalientes",
+        coordinates: [
+          [[22.0000, -102.0000], [22.0000, -101.0000], [21.0000, -101.0000], [21.0000, -102.0000], [22.0000, -102.0000]]
+        ],
+        baseIntensity: 0.5,
+        seasonal: 0.6
+      },
+      {
+        name: "Jalisco",
+        coordinates: [
+          [[22.0000, -105.0000], [22.0000, -101.0000], [19.0000, -101.0000], [19.0000, -105.0000], [22.0000, -105.0000]]
+        ],
+        baseIntensity: 0.4,
+        seasonal: 0.7
+      },
+      {
+        name: "Guanajuato",
+        coordinates: [
+          [[21.0000, -101.0000], [21.0000, -100.0000], [20.0000, -100.0000], [20.0000, -101.0000], [21.0000, -101.0000]]
+        ],
+        baseIntensity: 0.4,
+        seasonal: 0.7
+      },
+      {
+        name: "Querétaro",
+        coordinates: [
+          [[21.0000, -100.0000], [21.0000, -99.0000], [20.0000, -99.0000], [20.0000, -100.0000], [21.0000, -100.0000]]
+        ],
+        baseIntensity: 0.4,
+        seasonal: 0.7
+      },
+      {
+        name: "Michoacán",
+        coordinates: [
+          [[20.0000, -103.0000], [20.0000, -100.0000], [17.0000, -100.0000], [17.0000, -103.0000], [20.0000, -103.0000]]
+        ],
+        baseIntensity: 0.3,
+        seasonal: 0.8
+      },
+      {
+        name: "México",
+        coordinates: [
+          [[20.0000, -100.0000], [20.0000, -98.0000], [18.0000, -98.0000], [18.0000, -100.0000], [20.0000, -100.0000]]
+        ],
+        baseIntensity: 0.3,
+        seasonal: 0.8
+      },
+      {
+        name: "Hidalgo",
+        coordinates: [
+          [[21.0000, -99.0000], [21.0000, -98.0000], [19.0000, -98.0000], [19.0000, -99.0000], [21.0000, -99.0000]]
+        ],
+        baseIntensity: 0.3,
+        seasonal: 0.8
+      },
+      {
+        name: "Tlaxcala",
+        coordinates: [
+          [[19.5000, -98.5000], [19.5000, -97.5000], [19.0000, -97.5000], [19.0000, -98.5000], [19.5000, -98.5000]]
+        ],
+        baseIntensity: 0.3,
+        seasonal: 0.8
+      },
+      {
+        name: "Puebla",
+        coordinates: [
+          [[20.0000, -98.0000], [20.0000, -96.0000], [17.0000, -96.0000], [17.0000, -98.0000], [20.0000, -98.0000]]
+        ],
+        baseIntensity: 0.3,
+        seasonal: 0.8
+      },
+      {
+        name: "Veracruz",
+        coordinates: [
+          [[22.0000, -98.0000], [22.0000, -93.0000], [17.0000, -93.0000], [17.0000, -98.0000], [22.0000, -98.0000]]
+        ],
+        baseIntensity: 0.2,
+        seasonal: 0.9
+      },
+      {
+        name: "Yucatán",
+        coordinates: [
+          [[21.0000, -90.0000], [21.0000, -87.0000], [18.0000, -87.0000], [18.0000, -90.0000], [21.0000, -90.0000]]
+        ],
+        baseIntensity: 0.3,
+        seasonal: 0.8
+      },
+      {
+        name: "Quintana Roo",
+        coordinates: [
+          [[21.0000, -87.0000], [21.0000, -86.0000], [18.0000, -86.0000], [18.0000, -87.0000], [21.0000, -87.0000]]
+        ],
+        baseIntensity: 0.3,
+        seasonal: 0.8
+      },
+      {
+        name: "Campeche",
+        coordinates: [
+          [[20.0000, -90.0000], [20.0000, -87.0000], [17.0000, -87.0000], [17.0000, -90.0000], [20.0000, -90.0000]]
+        ],
+        baseIntensity: 0.3,
+        seasonal: 0.8
+      },
+      {
+        name: "Tabasco",
+        coordinates: [
+          [[18.0000, -94.0000], [18.0000, -91.0000], [17.0000, -91.0000], [17.0000, -94.0000], [18.0000, -94.0000]]
+        ],
+        baseIntensity: 0.2,
+        seasonal: 0.9
+      },
+      {
+        name: "Chiapas",
+        coordinates: [
+          [[18.0000, -94.0000], [18.0000, -90.0000], [14.0000, -90.0000], [14.0000, -94.0000], [18.0000, -94.0000]]
+        ],
+        baseIntensity: 0.2,
+        seasonal: 0.9
+      },
+      {
+        name: "Oaxaca",
+        coordinates: [
+          [[18.0000, -98.0000], [18.0000, -93.0000], [15.0000, -93.0000], [15.0000, -98.0000], [18.0000, -98.0000]]
+        ],
+        baseIntensity: 0.2,
+        seasonal: 0.9
+      },
+      {
+        name: "Guerrero",
+        coordinates: [
+          [[18.0000, -102.0000], [18.0000, -98.0000], [16.0000, -98.0000], [16.0000, -102.0000], [18.0000, -102.0000]]
+        ],
+        baseIntensity: 0.2,
+        seasonal: 0.9
+      },
+      {
+        name: "Morelos",
+        coordinates: [
+          [[19.0000, -99.5000], [19.0000, -98.5000], [18.0000, -98.5000], [18.0000, -99.5000], [19.0000, -99.5000]]
+        ],
+        baseIntensity: 0.3,
+        seasonal: 0.8
+      },
+      {
+        name: "Colima",
+        coordinates: [
+          [[19.5000, -104.5000], [19.5000, -103.5000], [18.5000, -103.5000], [18.5000, -104.5000], [19.5000, -104.5000]]
+        ],
+        baseIntensity: 0.3,
+        seasonal: 0.8
+      },
+      {
+        name: "Nayarit",
+        coordinates: [
+          [[22.0000, -105.0000], [22.0000, -104.0000], [20.0000, -104.0000], [20.0000, -105.0000], [22.0000, -105.0000]]
+        ],
+        baseIntensity: 0.4,
+        seasonal: 0.7
+      },
+      {
+        name: "Sinaloa",
+        coordinates: [
+          [[26.0000, -109.0000], [26.0000, -105.0000], [22.0000, -105.0000], [22.0000, -109.0000], [26.0000, -109.0000]]
+        ],
+        baseIntensity: 0.5,
+        seasonal: 0.6
+      },
+      {
+        name: "Baja California Sur",
+        coordinates: [
+          [[28.0000, -115.0000], [28.0000, -109.0000], [22.0000, -109.0000], [22.0000, -115.0000], [28.0000, -115.0000]]
+        ],
+        baseIntensity: 0.8,
+        seasonal: 0.4
+      }
+    ];
+
+    // Create drought patterns for Mexico using proper geographic zones
+    function createDroughtPattern(date) {
+      const month = date.getMonth();
+      const year = date.getFullYear();
+      
+      // Seasonal variation (dry season: Nov-Apr, wet season: May-Oct)
+      const isDrySeason = month >= 10 || month <= 3;
+      const seasonalFactor = isDrySeason ? 1.3 : 0.7;
+      
+      // Multi-year drought cycles
+      const cyclePhase = (year - 2020) % 4;
+      const cycleFactors = [1.5, 1.2, 0.8, 0.6]; // Peak, high, low, recovery
+      const cycleFactor = cycleFactors[cyclePhase];
+      
+      const droughtZones = [];
+      
+      mexicanRegions.forEach(region => {
+        const finalIntensity = Math.min(1.0, region.baseIntensity * seasonalFactor * cycleFactor);
+        
+        if (finalIntensity > 0.1) {
+          const droughtLevel = Math.floor(finalIntensity * 4); // 0-4 scale
+          const colors = ['#e6f3ff', '#ffffcc', '#ffd966', '#ffb366', '#ff8c66', '#ff6666'];
+          const color = colors[droughtLevel] || colors[0];
+          
+          // Create polygon for each region
+          const polygon = L.polygon(region.coordinates, {
+            color: '#333',
+            weight: 1,
+            fillColor: color,
+            fillOpacity: 0.7,
+            opacity: 0.8
+          });
+          
+          const levelNames = ['Normal', 'D0', 'D1', 'D2', 'D3', 'D4'];
+          polygon.bindTooltip(`${region.name}<br>${levelNames[droughtLevel]}<br>${formatDate(date)}`, {
+            permanent: false,
+            direction: 'top'
+          });
+          
+          droughtZones.push(polygon);
+        }
+      });
+      
+      return droughtZones;
+    }
+
+    // Format date for display
+    function formatDate(date) {
+      return date.toISOString().slice(0, 7); // YYYY-MM
+    }
+
+    // Update map with new drought pattern
+    function updateDroughtMap(date) {
+      // Remove existing layer
+      if (currentDroughtLayer) {
+        map.removeLayer(currentDroughtLayer);
+      }
+      
+      // Create new drought pattern
+      const droughtZones = createDroughtPattern(date);
+      currentDroughtLayer = L.layerGroup(droughtZones);
+      currentDroughtLayer.addTo(map);
+      
+      // Update time display
+      currentTimeDisplay.textContent = formatDate(date);
+    }
+
+    // Handle slider change
+    timeSlider.addEventListener('input', function() {
+      const index = parseInt(this.value);
+      const date = timeArray[index];
+      updateDroughtMap(date);
+    });
+
+    // Initialize with middle date
+    const initialDate = timeArray[30]; // 2022-06
+    updateDroughtMap(initialDate);
+  </script>
+</body>
+</html>
