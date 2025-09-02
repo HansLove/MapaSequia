@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Minimal Map Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: Arial, sans-serif;
+        }
+        #map { 
+            height: 100vh; 
+            width: 100vw;
+            background-color: #e0e0e0;
+            border: 2px solid red;
+        }
+        .test-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h3>Minimal Test</h3>
+        <p>If you can see this text and a red border, the HTML is working.</p>
+        <p>Map should appear below this panel.</p>
+    </div>
+    
+    <div id="map"></div>
+
+    <script>
+        console.log('Starting minimal test...');
+        
+        // Wait a bit for everything to load
+        setTimeout(() => {
+            console.log('Creating map...');
+            
+            if (typeof L !== 'undefined') {
+                console.log('Leaflet is available');
+                
+                const map = L.map('map').setView([23.6345, -102.5528], 5);
+                console.log('Map created');
+                
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '© OpenStreetMap, © CARTO'
+                }).addTo(map);
+                console.log('Tile layer added');
+                
+                L.marker([23.6345, -102.5528]).addTo(map)
+                    .bindPopup('Mexico Center');
+                console.log('Marker added');
+                
+            } else {
+                console.error('Leaflet not available');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
